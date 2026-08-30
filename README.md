@@ -1,10 +1,27 @@
-# 🎙️ Classical Noise Reduction: Spectral Subtraction in Python
+# 🎙️ Classical Noise Reduction: Spectral Subtraction in Python & Web Audio
 
+[![Live Demo](https://img.shields.io/badge/Live%20Interactive%20Lab-GitHub%20Pages-1c23ba?style=for-the-badge&logo=githubpages&logoColor=white)](https://gliesecc212.github.io/noise-reduction-spectral-subtraction/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Scipy](https://img.shields.io/badge/DSP-SciPy%20%26%20NumPy-orange.svg)](https://scipy.org/)
 
-An end-to-end implementation of **Spectral Subtraction** for speech enhancement and audio noise reduction in pure Python (no Machine Learning / PyTorch required).
+An end-to-end implementation of **Spectral Subtraction** for speech enhancement and audio noise reduction in pure Python (NumPy / SciPy) and an interactive, real-time client-side **Web Audio DSP Lab** (inspired by the clean clinical design of Intuitive da Vinci).
+
+---
+
+## 🌐 Live Interactive DSP Web App
+
+👉 **[Try the Live Web Audio Lab Here](https://gliesecc212.github.io/noise-reduction-spectral-subtraction/)**
+
+### Interactive Features:
+* **Audio Inputs**: Use preloaded clean speech, upload your own WAV file, or **record live from your microphone (3s)**.
+* **Additive Noise Models**: Gaussian White Noise, Pink Noise (1/f), and Narrowband Fan Hum with a live **Target SNR slider (-10 dB to +25 dB)**.
+* **Filter Tuning**:
+  * **Over-subtraction factor ($\alpha$)**: $0.00 \text{--} 3.50$
+  * **Spectral floor ($\beta$)**: $0.000 \text{--} 0.150$ to control musical noise ringing
+  * **STFT Window & Overlap**: 256, 512, 1024 samples with 50% or 75% overlap
+* **Live Visualizations**: Time-domain waveforms, real-time Magma Spectrogram colormaps, and Noise Power Spectral Density $\hat{N}(f)$ curves.
+* **Audio Evaluation**: A/B play Clean, Noisy, and Enhanced signals, or download the processed audio as a WAV file.
 
 ---
 
@@ -32,7 +49,7 @@ An end-to-end implementation of **Spectral Subtraction** for speech enhancement 
           │
           ▼
  Magnitude Subtraction:
-    |X̂(f, t)| = max(|Y(f, t)| - α · N̂(f), 0)
+    |X̂(f, t)| = max(|Y(f, t)| - α · N̂(f), β · N̂(f))
           │
           ▼
  Phase Recombination:
@@ -111,7 +128,7 @@ Assuming speech $x[n]$ and noise $d[n]$ are uncorrelated, their power spectral d
 $$|Y(f, t)|^2 \approx |X(f, t)|^2 + |D(f, t)|^2$$
 
 Spectral subtraction estimates the clean magnitude by subtracting the estimated noise spectrum $\hat{N}(f)$:
-$$|\hat{X}(f, t)| = \max\left(|Y(f, t)| - \alpha \hat{N}(f), \; 0\right)$$
+$$|\hat{X}(f, t)| = \max\left(|Y(f, t)| - \alpha \hat{N}(f), \; \beta \hat{N}(f)\right)$$
 
 The time-domain enhanced signal is reconstructed by preserving the original noisy phase $\angle Y(f, t)$:
 $$\hat{X}(f, t) = |\hat{X}(f, t)| \cdot e^{j \angle Y(f, t)}$$
@@ -132,12 +149,13 @@ cd noise-reduction-spectral-subtraction
 pip install numpy scipy matplotlib soundfile
 ```
 
-### 3. Run the pipeline
+### 3. Run the Python pipeline
 ```bash
 python noise_reduction.py
 ```
 
-Generated audio outputs (`clean.wav`, `noisy.wav`, `enhanced.wav`, `enhanced_alpha_*.wav`) and visualizations will be saved to the `./output/` directory.
+### 4. Open the Interactive Web App locally
+Simply open [`index.html`](index.html) in any modern web browser or visit the [Live Deployment](https://gliesecc212.github.io/noise-reduction-spectral-subtraction/).
 
 ---
 
@@ -145,7 +163,9 @@ Generated audio outputs (`clean.wav`, `noisy.wav`, `enhanced.wav`, `enhanced_alp
 ```
 .
 ├── clean.wav                    # Reference 16 kHz clean speech sample
-├── noise_reduction.py           # Core Spectral Subtraction pipeline
+├── noise_reduction.py           # Core Spectral Subtraction pipeline in Python
+├── index.html                   # Interactive in-browser Web Audio DSP Studio
+├── build_web.py                 # HTML compiler and asset bundler
 ├── output/                      # Output audio and visualization plots
 │   ├── clean.wav
 │   ├── noisy.wav
@@ -165,4 +185,4 @@ Generated audio outputs (`clean.wav`, `noisy.wav`, `enhanced.wav`, `enhanced_alp
 ---
 
 ## 📜 License
-MIT License. Feel free to use and experiment!
+MIT License.
