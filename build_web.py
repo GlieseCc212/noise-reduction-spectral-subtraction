@@ -49,7 +49,7 @@ html_template = """<!DOCTYPE html>
     }
     .canvas-container {
       position: relative;
-      background: #fafbfc;
+      background: #ffffff;
       border: 1px solid #e5e7eb;
       border-radius: 0.75rem;
       overflow: hidden;
@@ -456,10 +456,10 @@ html_template = """<!DOCTYPE html>
     const DEFAULT_AUDIO_B64 = "___BASE64_AUDIO_PLACEHOLDER___";
 
     let audioCtx = null;
+    let rawCleanAudio = null; // Float32Array
     let cleanBuffer = null;
     let noisyBuffer = null;
     let enhancedBuffer = null;
-    let noiseSignal = null;
     let sampleRate = 16000;
     
     let activeSourceNode = null;
@@ -480,6 +480,35 @@ html_template = """<!DOCTYPE html>
       noisySig: null,
       enhancedSig: null
     };
+
+    function parseWav(arrayBuffer) {
+      const view = new DataView(arrayBuffer);
+      let pos = 12;
+      let fs = 16000;
+      let channels = 1;
+      while (pos < view.byteLength - 8) {
+        const id = String.fromCharCode(view.getUint8(pos), view.getUint8(pos+1), view.getUint8(pos+2), view.getUint8(pos+3));
+        const size = view.getUint32(pos + 4, true);
+        if (id === "fmt ") {
+          channels = view.getUint16(pos + 10, true);
+          fs = view.getUint32(pos + 12, true);
+        } else if (id === "data") {
+          const numSamples = Math.floor(size / (2 * channels));
+          const samples = new Float32Array(numSamples);
+          const dataOffset = pos + 8;
+          for (let i = 0; i < numSamples; i++) {
+            let sum = 0;
+            for (let ch = 0; ch < channels; ch++) {
+              sum += view.getInt16(dataOffset + (i * channels + ch) * 2, true) / 32768.0;
+            }
+            samples[i] = sum / channels;
+          }
+          return { samples, sampleRate: fs };
+        }
+        pos += 8 + size;
+      }
+      return null;
+    }
 
     function fft(re, im, inverse) {
       const n = re.length;
@@ -581,11 +610,10 @@ html_template = """<!DOCTYPE html>
       return bytes.buffer;
     }
 
-    function setupCanvasSize(canvas) {
+    function getCanvasDimensions(canvas) {
       const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      const w = Math.max(300, Math.floor((rect.width || canvas.parentElement.clientWidth || 800) * dpr));
-      const h = Math.max(100, Math.floor((rect.height || canvas.parentElement.clientHeight || 180) * dpr));
+      const w = Math.max(300, Math.floor(canvas.offsetWidth * dpr));
+      const h = Math.max(80, Math.floor(canvas.offsetHeight * dpr));
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -594,7 +622,7 @@ html_template = """<!DOCTYPE html>
     }
 
     function processDSP() {
-      if (!cleanBuffer) return;
+      if (!rawCleanAudio) return;
       const startTime = performance.now();
 
       const targetSnrDb = parseFloat(document.getElementById("inputSnr").value);
@@ -607,18 +635,17 @@ html_template = """<!DOCTYPE html>
       
       const noiseType = currentNoiseType || "white";
 
-      const rawClean = cleanBuffer.getChannelData(0);
       const leadInSamples = Math.round(noiseDuration * sampleRate);
-      const totalLen = rawClean.length + leadInSamples;
+      const totalLen = rawCleanAudio.length + leadInSamples;
       
       const cleanPadded = new Float32Array(totalLen);
-      cleanPadded.set(rawClean, leadInSamples);
+      cleanPadded.set(rawCleanAudio, leadInSamples);
 
       let rawNoise = generateNoise(totalLen, noiseType, sampleRate);
       
       let speechEnergy = 0;
-      for (let i = 0; i < rawClean.length; i++) speechEnergy += rawClean[i] * rawClean[i];
-      const speechPower = speechEnergy / rawClean.length;
+      for (let i = 0; i < rawCleanAudio.length; i++) speechEnergy += rawCleanAudio[i] * rawCleanAudio[i];
+      const speechPower = speechEnergy / rawCleanAudio.length;
 
       let noiseEnergy = 0;
       for (let i = 0; i < totalLen; i++) noiseEnergy += rawNoise[i] * rawNoise[i];
@@ -629,7 +656,6 @@ html_template = """<!DOCTYPE html>
       
       const scaledNoise = new Float32Array(totalLen);
       for (let i = 0; i < totalLen; i++) scaledNoise[i] = rawNoise[i] * noiseScale;
-      noiseSignal = scaledNoise;
 
       const noisySig = new Float32Array(totalLen);
       for (let i = 0; i < totalLen; i++) noisySig[i] = cleanPadded[i] + scaledNoise[i];
@@ -735,8 +761,6 @@ html_template = """<!DOCTYPE html>
         for (let i = 0; i < totalLen; i++) enhancedSig[i] /= (maxAmp + 1e-6);
       }
 
-      createAudioBuffers(cleanPadded, noisySig, enhancedSig);
-
       stftCache = {
         clean: cleanMag,
         noisy: noisyMag,
@@ -762,20 +786,15 @@ html_template = """<!DOCTYPE html>
       drawNoiseProfile();
     }
 
-    function createAudioBuffers(clean, noisy, enhanced) {
+    function createAudioBufferFromData(data) {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-      cleanBuffer = audioCtx.createBuffer(1, clean.length, sampleRate);
-      cleanBuffer.getChannelData(0).set(clean);
-
-      noisyBuffer = audioCtx.createBuffer(1, noisy.length, sampleRate);
-      noisyBuffer.getChannelData(0).set(noisy);
-
-      enhancedBuffer = audioCtx.createBuffer(1, enhanced.length, sampleRate);
-      enhancedBuffer.getChannelData(0).set(enhanced);
+      const buf = audioCtx.createBuffer(1, data.length, sampleRate);
+      buf.getChannelData(0).set(data);
+      return buf;
     }
 
-    function playAudio(buffer, type) {
+    function playAudio(type) {
+      if (!stftCache) return;
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === "suspended") audioCtx.resume();
 
@@ -791,6 +810,14 @@ html_template = """<!DOCTYPE html>
         return;
       }
 
+      let data = null;
+      if (type === "clean") data = stftCache.cleanSig;
+      else if (type === "noisy") data = stftCache.noisySig;
+      else if (type === "enhanced") data = stftCache.enhancedSig;
+
+      if (!data) return;
+
+      const buffer = createAudioBufferFromData(data);
       const source = audioCtx.createBufferSource();
       source.buffer = buffer;
       source.connect(audioCtx.destination);
@@ -825,11 +852,13 @@ html_template = """<!DOCTYPE html>
     function drawWaveforms() {
       const canvas = document.getElementById("waveformCanvas");
       if (!canvas) return;
-      const { w, h, dpr } = setupCanvasSize(canvas);
+      const { w, h, dpr } = getCanvasDimensions(canvas);
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, w, h);
 
-      // Light grid lines
+      ctx.fillStyle = "#fafbfc";
+      ctx.fillRect(0, 0, w, h);
+
       ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -856,7 +885,6 @@ html_template = """<!DOCTYPE html>
       const len = data.length;
       if (len === 0) return;
 
-      // Baseline
       ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -864,7 +892,6 @@ html_template = """<!DOCTYPE html>
       ctx.lineTo(w, mid);
       ctx.stroke();
 
-      // Envelope
       ctx.strokeStyle = color;
       ctx.lineWidth = Math.max(1, 1.2 * dpr);
       ctx.beginPath();
@@ -922,7 +949,7 @@ html_template = """<!DOCTYPE html>
     function drawSpectrogram() {
       const canvas = document.getElementById("spectrogramCanvas");
       if (!canvas) return;
-      const { w, h, dpr } = setupCanvasSize(canvas);
+      const { w, h, dpr } = getCanvasDimensions(canvas);
       const ctx = canvas.getContext("2d");
 
       const magData = stftCache[currentSpecView];
@@ -978,7 +1005,7 @@ html_template = """<!DOCTYPE html>
     function drawNoiseProfile() {
       const canvas = document.getElementById("noiseProfileCanvas");
       if (!canvas) return;
-      const { w, h, dpr } = setupCanvasSize(canvas);
+      const { w, h, dpr } = getCanvasDimensions(canvas);
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, w, h);
 
@@ -1028,17 +1055,15 @@ html_template = """<!DOCTYPE html>
       ctx.fillText("N̂(f) Spectral Magnitude (dB)", 8 * dpr, 14 * dpr);
     }
 
-    function exportWav(buffer) {
+    function exportWav(data) {
       const numOfChan = 1;
-      const length = buffer.length * numOfChan * 2 + 44;
+      const length = data.length * numOfChan * 2 + 44;
       const outBuffer = new ArrayBuffer(length);
       const view = new DataView(outBuffer);
-      const channels = [buffer.getChannelData(0)];
-      let sampleRate = buffer.sampleRate;
       let pos = 0;
 
-      function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
-      function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+      function setUint16(val) { view.setUint16(pos, val, true); pos += 2; }
+      function setUint32(val) { view.setUint32(pos, val, true); pos += 4; }
 
       setUint32(0x46464952);
       setUint32(length - 8);
@@ -1054,8 +1079,8 @@ html_template = """<!DOCTYPE html>
       setUint32(0x61746164);
       setUint32(length - pos - 4);
 
-      for (let i = 0; i < buffer.length; i++) {
-        let s = Math.max(-1, Math.min(1, channels[0][i]));
+      for (let i = 0; i < data.length; i++) {
+        let s = Math.max(-1, Math.min(1, data[i]));
         s = (0.5 + s < 0 ? s * 32768 : s * 32767) | 0;
         view.setInt16(pos, s, true);
         pos += 2;
@@ -1141,26 +1166,34 @@ html_template = """<!DOCTYPE html>
       document.getElementById("tabEnhancedSpec").addEventListener("click", () => { currentSpecView = "enhanced"; updateSpecTabsUI(); drawSpectrogram(); });
       document.getElementById("tabCleanSpec").addEventListener("click", () => { currentSpecView = "clean"; updateSpecTabsUI(); drawSpectrogram(); });
 
-      document.getElementById("btnPlayClean").addEventListener("click", () => playAudio(cleanBuffer, "clean"));
-      document.getElementById("btnPlayNoisy").addEventListener("click", () => playAudio(noisyBuffer, "noisy"));
-      document.getElementById("btnPlayEnhanced").addEventListener("click", () => playAudio(enhancedBuffer, "enhanced"));
+      document.getElementById("btnPlayClean").addEventListener("click", () => playAudio("clean"));
+      document.getElementById("btnPlayNoisy").addEventListener("click", () => playAudio("noisy"));
+      document.getElementById("btnPlayEnhanced").addEventListener("click", () => playAudio("enhanced"));
 
       document.getElementById("btnDownloadEnhanced").addEventListener("click", () => {
-        if (enhancedBuffer) exportWav(enhancedBuffer);
+        if (stftCache && stftCache.enhancedSig) exportWav(stftCache.enhancedSig);
       });
 
       const fileInput = document.getElementById("audioFileInput");
       fileInput.addEventListener("change", async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const arrayBuf = await file.arrayBuffer();
-        audioCtx.decodeAudioData(arrayBuf, (decoded) => {
-          cleanBuffer = decoded;
-          sampleRate = decoded.sampleRate;
+        const parsed = parseWav(arrayBuf);
+        if (parsed) {
+          rawCleanAudio = parsed.samples;
+          sampleRate = parsed.sampleRate;
           document.getElementById("audioStatusBadge").innerText = `${file.name.substring(0, 12)}... (${sampleRate}Hz)`;
           processDSP();
-        });
+        } else {
+          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          audioCtx.decodeAudioData(arrayBuf, (decoded) => {
+            rawCleanAudio = decoded.getChannelData(0);
+            sampleRate = decoded.sampleRate;
+            document.getElementById("audioStatusBadge").innerText = `${file.name.substring(0, 12)}... (${sampleRate}Hz)`;
+            processDSP();
+          });
+        }
       });
 
       document.getElementById("btnSourceDefault").addEventListener("click", loadDefaultAudio);
@@ -1182,7 +1215,7 @@ html_template = """<!DOCTYPE html>
             const arrayBuf = await blob.arrayBuffer();
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             audioCtx.decodeAudioData(arrayBuf, (decoded) => {
-              cleanBuffer = decoded;
+              rawCleanAudio = decoded.getChannelData(0);
               sampleRate = decoded.sampleRate;
               document.getElementById("audioStatusBadge").innerText = `Mic (${decoded.duration.toFixed(1)}s)`;
               document.getElementById("micText").innerText = "Capture Microphone Audio (3s)";
@@ -1234,16 +1267,18 @@ html_template = """<!DOCTYPE html>
     }
 
     function loadDefaultAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const arrayBuf = base64ToArrayBuffer(DEFAULT_AUDIO_B64);
-      audioCtx.decodeAudioData(arrayBuf, (decoded) => {
-        cleanBuffer = decoded;
-        sampleRate = decoded.sampleRate;
-        document.getElementById("audioStatusBadge").innerText = `Standard Voice (${sampleRate}Hz)`;
-        processDSP();
-      }, (err) => {
-        console.error("Audio decode error:", err);
-      });
+      try {
+        const arrayBuf = base64ToArrayBuffer(DEFAULT_AUDIO_B64);
+        const parsed = parseWav(arrayBuf);
+        if (parsed) {
+          rawCleanAudio = parsed.samples;
+          sampleRate = parsed.sampleRate;
+          document.getElementById("audioStatusBadge").innerText = `Standard Voice (${sampleRate}Hz)`;
+          processDSP();
+        }
+      } catch (err) {
+        console.error("WAV decode error:", err);
+      }
     }
 
     window.addEventListener("DOMContentLoaded", () => {
@@ -1263,4 +1298,4 @@ with open("/Users/pratikpandurangpawar/Documents/Noise reduction/index.html", "w
 with open("/Users/pratikpandurangpawar/.gemini/antigravity/brain/1b91713f-83e4-443f-b09a-1104711e074f/app.html", "w") as f:
     f.write(final_html)
 
-print("Rebuilt index.html with clean state variables and verified syntax!")
+print("Rebuilt with synchronous zero-dependency WAV decoder and instant rendering!")
