@@ -1,166 +1,199 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" class="h-full bg-white">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Precision DSP Lab | Spectral Subtraction Speech Enhancement</title>
+  <title>Intuitive DSP | Spectral Subtraction Acoustic Lab</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #ffffff;
+      color: #202124;
     }
     .font-mono {
       font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     }
+    /* Intuitive Blue Range Sliders */
     input[type=range] {
-      accent-color: #0284c7;
-      background: #e2e8f0;
+      -webkit-appearance: none;
+      width: 100%;
+      background: #e5e7eb;
       height: 6px;
       border-radius: 9999px;
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #1c23ba;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      border: 2px solid #ffffff;
+      transition: transform 0.1s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background: #0052cc;
     }
     .canvas-container {
       position: relative;
-      background: #fafbfc;
-      border: 1px solid #e2e8f0;
-      border-radius: 0.875rem;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.75rem;
       overflow: hidden;
     }
   </style>
 </head>
-<body class="bg-[#f8fafc] text-slate-900 min-h-full flex flex-col antialiased selection:bg-sky-100 selection:text-sky-900">
+<body class="bg-white text-[#202124] min-h-full flex flex-col antialiased">
 
-  <!-- Top Global Navigation Bar (Intuitive / Precision Clean Style) -->
-  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+  <!-- Utility Header (Intuitive style) -->
+  <div class="bg-[#f2f3f5] border-b border-[#e5e7eb] px-4 sm:px-8 py-1.5 text-xs text-[#55575c] flex justify-between items-center">
+    <div class="flex items-center gap-4">
+      <span class="font-medium tracking-tight">INTUITIVE AUDIO SURGICAL SYSTEMS</span>
+      <span class="text-slate-300">|</span>
+      <span>Acoustic Signal Processing Division</span>
+    </div>
+    <div class="flex items-center gap-4 text-[11px]">
+      <span class="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
+        <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span> DSP Engine Active (16 kHz)
+      </span>
+    </div>
+  </div>
+
+  <!-- Primary Navigation Bar (Intuitive Clean White Style) -->
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#e5e7eb]">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       
-      <!-- Brand & Product Title -->
+      <!-- Brand Logo -->
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-xs font-bold text-base">
+        <div class="w-8 h-8 rounded-lg bg-[#1c23ba] text-white flex items-center justify-center font-bold text-lg shadow-sm">
           ◈
         </div>
         <div class="flex flex-col">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-bold tracking-tight text-slate-950">INTUITIVE DSP</span>
-            <span class="text-slate-300 font-light">|</span>
-            <span class="text-sm font-medium text-slate-600">Spectral Subtraction Studio</span>
+            <span class="text-base font-bold tracking-tight text-[#202124]">INTUITIVE</span>
+            <span class="text-sm font-light text-slate-400">/</span>
+            <span class="text-sm font-semibold text-[#1c23ba]">Spectral Subtraction Lab</span>
           </div>
-          <span class="text-[11px] text-slate-400 font-normal">Real-Time Acoustic Signal Processing & Speech Enhancement</span>
         </div>
       </div>
 
-      <!-- Right Header Actions & Live Indicator -->
+      <!-- Navigation Links & Actions -->
       <div class="flex items-center gap-3">
-        <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-medium">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Web Audio Engine Active</span>
-        </div>
-        <button id="resetDefaultsBtn" class="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition-colors shadow-xs">
-          Reset Parameters
+        <button id="resetDefaultsBtn" class="px-4 py-1.5 text-xs font-semibold text-[#202124] bg-[#f2f3f5] hover:bg-[#e5e7eb] rounded-lg border border-[#d1d5db] transition shadow-2xs">
+          Reset Defaults
         </button>
       </div>
 
     </div>
   </header>
 
-  <!-- Main Content Container -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 flex-1 w-full">
-
-    <!-- Hero / Headline Section -->
-    <div class="space-y-2 border-b border-slate-200/80 pb-6">
-      <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sky-50 text-sky-800 text-xs font-semibold border border-sky-200/70 uppercase tracking-wider">
-        Clinical Grade DSP • Zero Latency • In-Browser
+  <!-- Hero Section (Clean Intuitive da Vinci style) -->
+  <section class="border-b border-[#e5e7eb] bg-gradient-to-b from-[#fafbfc] to-white py-8 sm:py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-[#1c23ba] text-xs font-semibold border border-blue-200">
+        Clinical Grade Digital Signal Processing
       </div>
-      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
+      <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#202124]">
         Spectral Subtraction Audio Enhancement
       </h1>
-      <p class="text-sm sm:text-base text-slate-600 max-w-3xl leading-relaxed">
-        Experience classical magnitude subtraction in the Short-Time Fourier Transform (STFT) domain. Adjust parameters dynamically to eliminate broadband noise, manage musical artifacts, and analyze acoustic spectrum profiles in real time.
+      <p class="text-sm sm:text-base text-[#55575c] max-w-3xl leading-relaxed">
+        Real-time Short-Time Fourier Transform (STFT) speech enhancement and noise elimination platform. Adjust acoustic parameters, analyze time-frequency spectrograms, and isolate vocal formants with zero latency.
       </p>
     </div>
+  </section>
 
-    <!-- Main Workspace Grid -->
+  <!-- Main Interactive Lab Workspace -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 flex-1 w-full bg-white">
+
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
       <!-- Left Column: Precision Control Panel (4 cols) -->
       <div class="lg:col-span-4 space-y-6">
 
-        <!-- 1. Audio Source Card -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <!-- 1. Audio Source Selection -->
+        <div class="bg-white rounded-xl border border-[#e5e7eb] p-5 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-[#f2f3f5] pb-3">
             <div class="flex items-center gap-2">
-              <span class="w-5 h-5 rounded-full bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">1</span>
-              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900">Acoustic Source</h2>
+              <span class="w-5 h-5 rounded-full bg-[#1c23ba] text-white text-[11px] font-bold flex items-center justify-center">1</span>
+              <h2 class="text-xs font-bold uppercase tracking-wider text-[#202124]">Acoustic Signal Source</h2>
             </div>
-            <span id="audioStatusBadge" class="text-[11px] font-mono text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-              Clean (16kHz)
+            <span id="audioStatusBadge" class="text-[11px] font-mono text-[#55575c] bg-[#f2f3f5] px-2 py-0.5 rounded border border-[#e5e7eb]">
+              Default (16kHz)
             </span>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
-            <button id="btnSourceDefault" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 text-white transition-all shadow-xs flex items-center justify-center gap-1.5">
+            <button id="btnSourceDefault" class="px-3 py-2.5 text-xs font-semibold rounded-lg bg-[#1c23ba] hover:bg-[#0052cc] text-white transition shadow-xs flex items-center justify-center gap-1.5">
               <span>🎙️</span> Standard Voice
             </button>
-            <label class="px-3 py-2 text-xs font-semibold rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center shadow-xs">
+            <label class="px-3 py-2.5 text-xs font-semibold rounded-lg bg-white hover:bg-[#f8f9fa] text-[#202124] border border-[#d1d5db] transition cursor-pointer flex items-center justify-center gap-1.5 text-center shadow-xs">
               <span>📁</span> Upload WAV
               <input type="file" id="audioFileInput" accept="audio/*" class="hidden">
             </label>
           </div>
 
-          <button id="btnRecordMic" class="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all flex items-center justify-center gap-2">
+          <button id="btnRecordMic" class="w-full px-3 py-2.5 text-xs font-semibold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 transition flex items-center justify-center gap-2">
             <span id="micDot" class="w-2 h-2 rounded-full bg-rose-600"></span>
-            <span id="micText">Capture Microphone Input (3s)</span>
+            <span id="micText">Capture Microphone Audio (3s)</span>
           </button>
         </div>
 
-        <!-- 2. Noise Synthesis Card -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <!-- 2. Additive Noise Model -->
+        <div class="bg-white rounded-xl border border-[#e5e7eb] p-5 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-[#f2f3f5] pb-3">
             <div class="flex items-center gap-2">
-              <span class="w-5 h-5 rounded-full bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">2</span>
-              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900">Additive Noise Model</h2>
+              <span class="w-5 h-5 rounded-full bg-[#1c23ba] text-white text-[11px] font-bold flex items-center justify-center">2</span>
+              <h2 class="text-xs font-bold uppercase tracking-wider text-[#202124]">Additive Noise Model</h2>
             </div>
-            <span id="snrBadge" class="text-xs font-mono font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+            <span id="snrBadge" class="text-xs font-mono font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
               5.0 dB SNR
             </span>
           </div>
 
           <!-- Noise Profile Selector -->
           <div class="space-y-1.5">
-            <label class="text-xs font-medium text-slate-600 flex justify-between">
+            <label class="text-xs font-medium text-[#55575c] flex justify-between">
               <span>Noise Profile</span>
               <span id="noiseTypeDesc" class="text-slate-400 text-[11px]">Gaussian Broadband</span>
             </label>
             <div class="grid grid-cols-3 gap-1.5">
-              <button data-noise="white" class="noise-type-btn px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white transition shadow-xs">White</button>
-              <button data-noise="pink" class="noise-type-btn px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition">Pink (1/f)</button>
-              <button data-noise="fan" class="noise-type-btn px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition">Fan Drone</button>
+              <button data-noise="white" class="noise-type-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#202124] text-white transition shadow-xs">White</button>
+              <button data-noise="pink" class="noise-type-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition">Pink (1/f)</button>
+              <button data-noise="fan" class="noise-type-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition">Fan Hum</button>
             </div>
           </div>
 
           <!-- SNR Slider -->
           <div class="space-y-2 pt-1">
             <div class="flex justify-between text-xs">
-              <span class="font-medium text-slate-700">Target SNR (Signal-to-Noise)</span>
-              <span id="valSnr" class="font-mono text-slate-900 font-semibold bg-slate-100 px-2 py-0.5 rounded">5 dB</span>
+              <span class="font-medium text-[#202124]">Signal-to-Noise Ratio (SNR)</span>
+              <span id="valSnr" class="font-mono font-semibold text-[#202124] bg-[#f2f3f5] px-2 py-0.5 rounded border border-[#e5e7eb]">5 dB</span>
             </div>
-            <input type="range" id="inputSnr" min="-10" max="25" step="1" value="5" class="w-full cursor-pointer">
+            <input type="range" id="inputSnr" min="-10" max="25" step="1" value="5" class="w-full">
             <div class="flex justify-between text-[10px] text-slate-400 font-mono">
-              <span>-10 dB (Severe)</span>
+              <span>-10 dB (Heavy Noise)</span>
               <span>0 dB</span>
               <span>+25 dB (Mild)</span>
             </div>
           </div>
         </div>
 
-        <!-- 3. Spectral Subtraction Parameters Card -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <!-- 3. Spectral Subtraction Parameters -->
+        <div class="bg-white rounded-xl border border-[#e5e7eb] p-5 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-[#f2f3f5] pb-3">
             <div class="flex items-center gap-2">
-              <span class="w-5 h-5 rounded-full bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">3</span>
-              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900">DSP Filter Tuning</h2>
+              <span class="w-5 h-5 rounded-full bg-[#1c23ba] text-white text-[11px] font-bold flex items-center justify-center">3</span>
+              <h2 class="text-xs font-bold uppercase tracking-wider text-[#202124]">DSP Subtraction Filter</h2>
             </div>
-            <span class="text-[11px] font-mono text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+            <span class="text-[11px] font-mono text-[#1c23ba] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
               Live ISTFT
             </span>
           </div>
@@ -168,10 +201,10 @@
           <!-- Over-subtraction Alpha Slider -->
           <div class="space-y-1.5">
             <div class="flex justify-between text-xs">
-              <span class="font-medium text-slate-700">Over-Subtraction Factor (&alpha;)</span>
-              <span id="valAlpha" class="font-mono text-slate-900 font-semibold bg-slate-100 px-2 py-0.5 rounded">1.00</span>
+              <span class="font-medium text-[#202124]">Over-Subtraction Factor (&alpha;)</span>
+              <span id="valAlpha" class="font-mono font-semibold text-[#1c23ba] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">1.00</span>
             </div>
-            <input type="range" id="inputAlpha" min="0.0" max="3.5" step="0.05" value="1.0" class="w-full cursor-pointer">
+            <input type="range" id="inputAlpha" min="0.0" max="3.5" step="0.05" value="1.0" class="w-full">
             <div class="flex justify-between text-[10px] text-slate-400 font-mono">
               <span>0.5 (Natural)</span>
               <span>1.0 (Standard)</span>
@@ -183,15 +216,15 @@
           <div class="space-y-1.5 pt-1">
             <div class="flex justify-between text-xs">
               <div>
-                <span class="font-medium text-slate-700">Spectral Floor (&beta;)</span>
-                <span class="text-[10px] text-slate-400 block">Controls musical noise ringing</span>
+                <span class="font-medium text-[#202124]">Spectral Floor (&beta;)</span>
+                <span class="text-[10px] text-slate-400 block">Suppresses metallic musical noise</span>
               </div>
-              <span id="valBeta" class="font-mono text-slate-900 font-semibold bg-slate-100 px-2 py-0.5 rounded self-start">0.000</span>
+              <span id="valBeta" class="font-mono font-semibold text-[#202124] bg-[#f2f3f5] px-2 py-0.5 rounded border border-[#e5e7eb]">0.000</span>
             </div>
-            <input type="range" id="inputBeta" min="0.00" max="0.15" step="0.005" value="0.00" class="w-full cursor-pointer">
+            <input type="range" id="inputBeta" min="0.00" max="0.15" step="0.005" value="0.00" class="w-full">
             <div class="flex justify-between text-[10px] text-slate-400 font-mono">
               <span>0.00 (Hard Max)</span>
-              <span>0.02 (Optimal)</span>
+              <span>0.02 (Recommended)</span>
               <span>0.15 (Soft Floor)</span>
             </div>
           </div>
@@ -199,26 +232,26 @@
           <!-- Noise Lead-in Duration -->
           <div class="space-y-1.5 pt-1">
             <div class="flex justify-between text-xs">
-              <span class="font-medium text-slate-700">Noise Estimation Lead-in</span>
-              <span id="valNoiseDuration" class="font-mono text-slate-900 font-semibold bg-slate-100 px-2 py-0.5 rounded">0.50 s</span>
+              <span class="font-medium text-[#202124]">Noise Estimation Lead-in</span>
+              <span id="valNoiseDuration" class="font-mono font-semibold text-[#202124] bg-[#f2f3f5] px-2 py-0.5 rounded border border-[#e5e7eb]">0.50 s</span>
             </div>
-            <input type="range" id="inputNoiseDuration" min="0.1" max="1.5" step="0.05" value="0.5" class="w-full cursor-pointer">
+            <input type="range" id="inputNoiseDuration" min="0.1" max="1.5" step="0.05" value="0.5" class="w-full">
             <span class="text-[10px] text-slate-400 block">Initial quiet window used to compute N̂(f)</span>
           </div>
 
           <!-- STFT Parameters -->
-          <div class="pt-3 border-t border-slate-100 grid grid-cols-2 gap-3">
+          <div class="pt-3 border-t border-[#f2f3f5] grid grid-cols-2 gap-3">
             <div>
-              <label class="text-[11px] font-semibold text-slate-600 block mb-1">STFT Window Size</label>
-              <select id="selectNfft" class="w-full bg-slate-50 border border-slate-200 text-xs rounded-lg p-2 text-slate-800 font-medium focus:ring-1 focus:ring-sky-500">
+              <label class="text-[11px] font-semibold text-[#55575c] block mb-1">STFT Window</label>
+              <select id="selectNfft" class="w-full bg-[#f8f9fa] border border-[#d1d5db] text-xs rounded-lg p-2 text-[#202124] font-medium focus:ring-1 focus:ring-[#1c23ba]">
                 <option value="256">256 (16 ms)</option>
-                <option value="512" selected>512 (32 ms - Recommended)</option>
+                <option value="512" selected>512 (32 ms - Optimal)</option>
                 <option value="1024">1024 (64 ms)</option>
               </select>
             </div>
             <div>
-              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Frame Overlap</label>
-              <select id="selectOverlap" class="w-full bg-slate-50 border border-slate-200 text-xs rounded-lg p-2 text-slate-800 font-medium focus:ring-1 focus:ring-sky-500">
+              <label class="text-[11px] font-semibold text-[#55575c] block mb-1">Frame Overlap</label>
+              <select id="selectOverlap" class="w-full bg-[#f8f9fa] border border-[#d1d5db] text-xs rounded-lg p-2 text-[#202124] font-medium focus:ring-1 focus:ring-[#1c23ba]">
                 <option value="0.50">50% Overlap</option>
                 <option value="0.75" selected>75% Overlap</option>
               </select>
@@ -226,96 +259,96 @@
           </div>
         </div>
 
-        <!-- 4. Performance Metrics Card -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-3">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Telemetry & Diagnostic Metrics</h3>
+        <!-- 4. Diagnostic Metrics -->
+        <div class="bg-white rounded-xl border border-[#e5e7eb] p-5 shadow-xs space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-[#55575c]">DSP Real-Time Telemetry</h3>
           <div class="grid grid-cols-3 gap-3 text-center">
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-              <div class="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Input SNR</div>
-              <div id="statInputSnr" class="text-sm font-bold font-mono text-amber-600 mt-0.5">5.0 dB</div>
+            <div class="p-3 rounded-lg bg-[#fafbfc] border border-[#e5e7eb]">
+              <div class="text-[10px] font-medium text-[#55575c] uppercase">Input SNR</div>
+              <div id="statInputSnr" class="text-sm font-bold font-mono text-amber-700 mt-0.5">5.0 dB</div>
             </div>
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-              <div class="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Est. Gain</div>
-              <div id="statSnrGain" class="text-sm font-bold font-mono text-emerald-600 mt-0.5">+8.4 dB</div>
+            <div class="p-3 rounded-lg bg-[#fafbfc] border border-[#e5e7eb]">
+              <div class="text-[10px] font-medium text-[#55575c] uppercase">Est. Gain</div>
+              <div id="statSnrGain" class="text-sm font-bold font-mono text-emerald-700 mt-0.5">+8.4 dB</div>
             </div>
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-              <div class="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Processing</div>
-              <div id="statLatency" class="text-sm font-bold font-mono text-sky-600 mt-0.5">12 ms</div>
+            <div class="p-3 rounded-lg bg-[#fafbfc] border border-[#e5e7eb]">
+              <div class="text-[10px] font-medium text-[#55575c] uppercase">Latency</div>
+              <div id="statLatency" class="text-sm font-bold font-mono text-[#1c23ba] mt-0.5">12 ms</div>
             </div>
           </div>
         </div>
 
       </div>
 
-      <!-- Right Column: Interactive Diagnostics & Visualizations (8 cols) -->
+      <!-- Right Column: Visualizations & Audio Evaluation (8 cols) -->
       <div class="lg:col-span-8 space-y-6">
 
-        <!-- Listening Comparison Station -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm space-y-5">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <!-- Listening Evaluation Section -->
+        <div class="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-xs space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#f2f3f5] pb-4">
             <div>
-              <h2 class="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+              <h2 class="text-sm font-bold uppercase tracking-wider text-[#202124] flex items-center gap-2">
                 <span>🎧</span> Acoustic Evaluation Station
               </h2>
-              <p class="text-xs text-slate-500">A/B test the raw speech, degraded mixture, and enhanced output</p>
+              <p class="text-xs text-[#55575c]">Compare Clean Reference, Noisy Mixture, and Enhanced Speech</p>
             </div>
-            <button id="btnDownloadEnhanced" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 text-white transition shadow-xs flex items-center gap-2 self-start sm:self-auto">
+            <button id="btnDownloadEnhanced" class="px-4 py-2 text-xs font-semibold rounded-lg bg-[#202124] hover:bg-black text-white transition shadow-xs flex items-center gap-2 self-start sm:self-auto">
               <span>⬇️</span> Download Enhanced WAV
             </button>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <!-- Clean Audio Player -->
-            <div class="p-4 rounded-xl bg-[#fafbfc] border border-slate-200/80 space-y-3">
+            <div class="p-4 rounded-xl bg-[#fafbfc] border border-[#e5e7eb] space-y-3">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Clean Reference
+                <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-600"></span> Clean Reference
                 </span>
                 <span class="text-[10px] font-mono text-slate-400">Target</span>
               </div>
-              <button id="btnPlayClean" class="w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 transition flex items-center justify-center gap-2">
+              <button id="btnPlayClean" class="w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 transition flex items-center justify-center gap-2">
                 <span>▶</span> <span>Play Clean</span>
               </button>
             </div>
 
             <!-- Noisy Audio Player -->
-            <div class="p-4 rounded-xl bg-[#fafbfc] border border-slate-200/80 space-y-3">
+            <div class="p-4 rounded-xl bg-[#fafbfc] border border-[#e5e7eb] space-y-3">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-amber-800 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-amber-500"></span> Noisy Input
+                <span class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-amber-600"></span> Noisy Speech
                 </span>
-                <span id="badgeNoisyLabel" class="text-[10px] font-mono text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">5 dB</span>
+                <span id="badgeNoisyLabel" class="text-[10px] font-mono text-amber-800 font-semibold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">5 dB</span>
               </div>
-              <button id="btnPlayNoisy" class="w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 transition flex items-center justify-center gap-2">
+              <button id="btnPlayNoisy" class="w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300 transition flex items-center justify-center gap-2">
                 <span>▶</span> <span>Play Noisy</span>
               </button>
             </div>
 
             <!-- Enhanced Audio Player -->
-            <div class="p-4 rounded-xl bg-sky-50/50 border border-sky-200/80 space-y-3">
+            <div class="p-4 rounded-xl bg-blue-50/60 border border-blue-200 space-y-3">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-sky-900 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-sky-500"></span> Enhanced Output
+                <span class="text-xs font-bold text-[#1c23ba] flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-[#1c23ba]"></span> Enhanced Output
                 </span>
-                <span id="badgeAlphaLabel" class="text-[10px] font-mono text-sky-800 font-semibold bg-sky-100/80 px-1.5 py-0.5 rounded border border-sky-200">&alpha;=1.00</span>
+                <span id="badgeAlphaLabel" class="text-[10px] font-mono text-[#1c23ba] font-semibold bg-white px-1.5 py-0.5 rounded border border-blue-200">&alpha;=1.00</span>
               </div>
-              <button id="btnPlayEnhanced" class="w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-sky-600 hover:bg-sky-700 text-white shadow-xs transition flex items-center justify-center gap-2">
+              <button id="btnPlayEnhanced" class="w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-[#1c23ba] hover:bg-[#0052cc] text-white shadow-xs transition flex items-center justify-center gap-2">
                 <span>▶</span> <span>Play Enhanced</span>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Time-Domain Waveforms Section -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
-              <span>📈</span> Time-Domain Waveform Traces
+        <!-- Waveforms Section -->
+        <div class="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-[#f2f3f5] pb-3">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-[#202124] flex items-center gap-2">
+              <span>📈</span> Time-Domain Waveform Analysis
             </h2>
             <div class="flex items-center gap-4 text-xs font-medium">
-              <span class="flex items-center gap-1.5 text-emerald-700"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Clean</span>
-              <span class="flex items-center gap-1.5 text-amber-700"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Noisy</span>
-              <span class="flex items-center gap-1.5 text-sky-700"><span class="w-2.5 h-2.5 rounded-full bg-sky-600"></span> Enhanced</span>
+              <span class="flex items-center gap-1.5 text-emerald-800"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Clean</span>
+              <span class="flex items-center gap-1.5 text-amber-800"><span class="w-2.5 h-2.5 rounded-full bg-amber-600"></span> Noisy</span>
+              <span class="flex items-center gap-1.5 text-[#1c23ba]"><span class="w-2.5 h-2.5 rounded-full bg-[#1c23ba]"></span> Enhanced</span>
             </div>
           </div>
 
@@ -325,23 +358,23 @@
         </div>
 
         <!-- Spectrograms Section -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+        <div class="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-xs space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#f2f3f5] pb-3">
             <div>
-              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+              <h2 class="text-xs font-bold uppercase tracking-wider text-[#202124] flex items-center gap-2">
                 <span>🌌</span> Time-Frequency Spectrogram Heatmaps
               </h2>
-              <span class="text-[11px] text-slate-400">Full STFT magnitude distribution (0 Hz – 8 kHz)</span>
+              <span class="text-[11px] text-slate-400">STFT Spectral Energy Distribution (0 Hz – 8 kHz)</span>
             </div>
-            <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
-              <button id="tabNoisySpec" class="px-3 py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition">
+            <div class="flex items-center gap-1 bg-[#f2f3f5] p-1 rounded-lg border border-[#e5e7eb]">
+              <button id="tabNoisySpec" class="px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition">
                 Noisy
               </button>
-              <button id="tabEnhancedSpec" class="px-3 py-1 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-xs transition">
+              <button id="tabEnhancedSpec" class="px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition">
                 Enhanced
               </button>
-              <button id="tabCleanSpec" class="px-3 py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition">
-                Clean Reference
+              <button id="tabCleanSpec" class="px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition">
+                Clean
               </button>
             </div>
           </div>
@@ -351,29 +384,29 @@
           </div>
 
           <!-- Colorbar & Information -->
-          <div class="flex items-center justify-between text-[11px] text-slate-500 px-1">
+          <div class="flex items-center justify-between text-[11px] text-[#55575c] px-1">
             <div class="flex items-center gap-2">
               <span class="font-mono">-60 dB</span>
               <div class="w-28 h-2 rounded-full bg-gradient-to-r from-[#101827] via-[#7c3aed] via-[#f43f5e] to-[#fef08a]"></div>
               <span class="font-mono">0 dB</span>
             </div>
-            <div id="specInfoText" class="font-mono font-medium text-slate-700">
+            <div id="specInfoText" class="font-mono font-semibold text-[#1c23ba]">
               Enhanced Spectrogram (&alpha; = 1.0)
             </div>
           </div>
         </div>
 
         <!-- Estimated Noise Profile Section -->
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-[#f2f3f5] pb-3">
             <div>
-              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                <span>📊</span> Noise Power Spectral Density N̂(f)
+              <h3 class="text-xs font-bold uppercase tracking-wider text-[#202124] flex items-center gap-2">
+                <span>📊</span> Estimated Noise Spectrum N̂(f)
               </h3>
-              <p class="text-[11px] text-slate-400">Estimated from lead-in silence STFT magnitude frames</p>
+              <p class="text-[11px] text-slate-400">Magnitude profile extracted from initial silence lead-in</p>
             </div>
-            <span class="text-[11px] text-indigo-700 bg-indigo-50 font-mono font-medium px-2 py-0.5 rounded border border-indigo-200/60">
-              Averaged N̂(f)
+            <span class="text-[11px] text-[#1c23ba] bg-blue-50 font-mono font-medium px-2 py-0.5 rounded border border-blue-200">
+              Averaged Spectrum
             </span>
           </div>
           <div class="canvas-container h-36 w-full">
@@ -385,23 +418,23 @@
 
     </div>
 
-    <!-- Educational Engineering Footer -->
-    <footer class="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm space-y-4 text-xs text-slate-600">
-      <div class="flex items-center gap-2 text-slate-900 font-bold text-sm">
-        <span>💡</span> Engineering Insights & Core Observations
+    <!-- Engineering Principles Footer (Intuitive Style) -->
+    <footer class="bg-[#fafbfc] rounded-xl border border-[#e5e7eb] p-6 space-y-4 text-xs text-[#55575c]">
+      <div class="flex items-center gap-2 text-[#202124] font-bold text-sm">
+        <span>💡</span> Engineering Insights & Signal Principles
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-[12px] leading-relaxed">
-        <div class="space-y-1.5 p-4 rounded-xl bg-slate-50 border border-slate-200/70">
-          <span class="font-bold text-slate-900">1. Broadband vs Narrowband Attenuation</span>
-          <p class="text-slate-600">White noise has an evenly distributed broadband spectral signature. Fan drone noise concentrates intense energy in low-frequency harmonics (120Hz, 240Hz), which Spectral Subtraction eliminates with surgical precision.</p>
+        <div class="space-y-1.5 p-4 rounded-lg bg-white border border-[#e5e7eb]">
+          <span class="font-bold text-[#202124]">1. Broadband vs Narrowband Attenuation</span>
+          <p class="text-[#55575c]">White noise presents a uniform broadband floor. Periodic drone noise concentrates energy in low harmonics (120Hz, 240Hz), where subtraction eliminates hum with surgical precision.</p>
         </div>
-        <div class="space-y-1.5 p-4 rounded-xl bg-slate-50 border border-slate-200/70">
-          <span class="font-bold text-slate-900">2. The Over-Subtraction Trade-off (&alpha;)</span>
-          <p class="text-slate-600">Higher &alpha; values provide complete noise elimination during pauses, but cause spectral valleys and audible musical ringing. A balanced &alpha; &approx; 1.0 preserves natural vocal harmonics and intelligibility.</p>
+        <div class="space-y-1.5 p-4 rounded-lg bg-white border border-[#e5e7eb]">
+          <span class="font-bold text-[#202124]">2. Over-Subtraction Factor (&alpha;) Trade-off</span>
+          <p class="text-[#55575c]">Higher &alpha; completely cancels residual noise in speech pauses, but causes isolated spectral valleys. A balanced factor &alpha; &approx; 1.0 preserves natural speech formants.</p>
         </div>
-        <div class="space-y-1.5 p-4 rounded-xl bg-slate-50 border border-slate-200/70">
-          <span class="font-bold text-slate-900">3. Spectral Floor Mitigation (&beta;)</span>
-          <p class="text-slate-600">Setting a small spectral floor (&beta; &approx; 0.02) prevents random noise fluctuations from producing isolated sinusoidal spikes in the frequency domain, substituting musical noise with a benign uniform floor.</p>
+        <div class="space-y-1.5 p-4 rounded-lg bg-white border border-[#e5e7eb]">
+          <span class="font-bold text-[#202124]">3. Spectral Floor (&beta;) Artifact Control</span>
+          <p class="text-[#55575c]">Setting a small spectral floor (&beta; &approx; 0.02) prevents random STFT bins from dropping to zero, converting irritating musical ringing chirps into a soft, unobtrusive background floor.</p>
         </div>
       </div>
     </footer>
@@ -433,7 +466,6 @@
       duration: 0
     };
 
-    // --- Fast Radix-2 Cooley-Tukey FFT & IFFT ---
     function fft(re, im, inverse = false) {
       const n = re.length;
       let j = 0;
@@ -546,7 +578,7 @@
       const overlapRatio = parseFloat(document.getElementById("selectOverlap").value);
       const hop = Math.round(nfft * (1 - overlapRatio));
       
-      const activeNoiseBtn = document.querySelector(".noise-type-btn.bg-slate-900");
+      const activeNoiseBtn = document.querySelector(".noise-type-btn.bg-\[\#202124\]");
       const noiseType = activeNoiseBtn ? activeNoiseBtn.getAttribute("data-noise") : "white";
 
       const rawClean = cleanBuffer.getChannelData(0);
@@ -759,12 +791,11 @@
       btnNoisy.innerHTML = activePlayingType === "noisy" ? "<span>⏹</span> <span>Stop</span>" : "<span>▶</span> <span>Play Noisy</span>";
       btnEnhanced.innerHTML = activePlayingType === "enhanced" ? "<span>⏹</span> <span>Stop</span>" : "<span>▶</span> <span>Play Enhanced</span>";
 
-      btnClean.className = activePlayingType === "clean" ? "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-rose-500 text-white shadow-xs transition flex items-center justify-center gap-2" : "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 transition flex items-center justify-center gap-2";
-      btnNoisy.className = activePlayingType === "noisy" ? "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-rose-500 text-white shadow-xs transition flex items-center justify-center gap-2" : "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 transition flex items-center justify-center gap-2";
-      btnEnhanced.className = activePlayingType === "enhanced" ? "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-rose-500 text-white shadow-xs transition flex items-center justify-center gap-2" : "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-sky-600 hover:bg-sky-700 text-white shadow-xs transition flex items-center justify-center gap-2";
+      btnClean.className = activePlayingType === "clean" ? "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-rose-600 text-white shadow-xs transition flex items-center justify-center gap-2" : "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 transition flex items-center justify-center gap-2";
+      btnNoisy.className = activePlayingType === "noisy" ? "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-rose-600 text-white shadow-xs transition flex items-center justify-center gap-2" : "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300 transition flex items-center justify-center gap-2";
+      btnEnhanced.className = activePlayingType === "enhanced" ? "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-rose-600 text-white shadow-xs transition flex items-center justify-center gap-2" : "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-[#1c23ba] hover:bg-[#0052cc] text-white shadow-xs transition flex items-center justify-center gap-2";
     }
 
-    // --- Clean Light-Mode Waveforms ---
     function drawWaveforms() {
       const canvas = document.getElementById("waveformCanvas");
       const ctx = canvas.getContext("2d");
@@ -781,7 +812,7 @@
       const step = Math.max(1, Math.floor(len / w));
 
       // Clean Light-Mode Grid Lines
-      ctx.strokeStyle = "#e2e8f0";
+      ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let y = 0.33; y < 1; y += 0.33) {
@@ -790,12 +821,9 @@
       }
       ctx.stroke();
 
-      // Clean (Emerald top lane)
       drawLane(ctx, clean, 0, h * 0.33, "#059669", step);
-      // Noisy (Amber middle lane)
       drawLane(ctx, noisy, h * 0.33, h * 0.33, "#d97706", step);
-      // Enhanced (Cobalt bottom lane)
-      drawLane(ctx, enhanced, h * 0.66, h * 0.33, "#0284c7", step);
+      drawLane(ctx, enhanced, h * 0.66, h * 0.33, "#1c23ba", step);
     }
 
     function drawLane(ctx, data, top, height, color, step) {
@@ -820,7 +848,6 @@
       ctx.stroke();
     }
 
-    // --- Colormap for Spectrogram (Magma / Viridis Hybrid for High Light-Mode Contrast) ---
     function clinicalColormap(norm) {
       const v = Math.max(0, Math.min(1, norm));
       let r = 0, g = 0, b = 0;
@@ -886,8 +913,7 @@
 
       ctx.putImageData(imgData, 0, 0);
 
-      // Light HUD Labels
-      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
       ctx.font = `${10 * window.devicePixelRatio}px 'JetBrains Mono', monospace`;
       ctx.fillText("8.0 kHz", 12, 16 * window.devicePixelRatio);
       ctx.fillText("4.0 kHz", 12, h * 0.5);
@@ -895,7 +921,6 @@
       ctx.fillText(`${stftCache.duration.toFixed(1)} s`, w - 48 * window.devicePixelRatio, h - 8);
     }
 
-    // --- Clean Light-Mode Noise PSD Profile ---
     function drawNoiseProfile() {
       const canvas = document.getElementById("noiseProfileCanvas");
       const ctx = canvas.getContext("2d");
@@ -908,8 +933,7 @@
       const profile = stftCache.noiseProfile;
       const numBins = profile.length;
 
-      // Clean Grid
-      ctx.strokeStyle = "#e2e8f0";
+      ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let y = 0.25; y < 1; y += 0.25) {
@@ -919,7 +943,7 @@
       ctx.stroke();
 
       const minDb = -50, maxDb = 10;
-      ctx.strokeStyle = "#4f46e5";
+      ctx.strokeStyle = "#1c23ba";
       ctx.lineWidth = 2 * window.devicePixelRatio;
       ctx.beginPath();
 
@@ -933,20 +957,18 @@
       }
       ctx.stroke();
 
-      // Soft Indigo Fill
       ctx.lineTo(w, h);
       ctx.lineTo(0, h);
       ctx.closePath();
-      ctx.fillStyle = "rgba(79, 70, 229, 0.08)";
+      ctx.fillStyle = "rgba(28, 35, 186, 0.06)";
       ctx.fill();
 
-      // Labels
-      ctx.fillStyle = "#64748b";
+      ctx.fillStyle = "#55575c";
       ctx.font = `${9 * window.devicePixelRatio}px 'JetBrains Mono', monospace`;
       ctx.fillText("0 Hz", 8, h - 6);
       ctx.fillText("4 kHz", w * 0.5 - 15, h - 6);
       ctx.fillText("8 kHz", w - 38 * window.devicePixelRatio, h - 6);
-      ctx.fillText("N̂(f) Power Density (dB)", 8, 14 * window.devicePixelRatio);
+      ctx.fillText("N̂(f) Spectral Magnitude (dB)", 8, 14 * window.devicePixelRatio);
     }
 
     function exportWav(buffer) {
@@ -1029,31 +1051,29 @@
       document.getElementById("selectNfft").addEventListener("change", triggerUpdate);
       document.getElementById("selectOverlap").addEventListener("change", triggerUpdate);
 
-      // Noise Selection Buttons
       const noiseBtns = document.querySelectorAll(".noise-type-btn");
       noiseBtns.forEach(btn => {
         btn.addEventListener("click", () => {
           noiseBtns.forEach(b => {
-            b.className = "noise-type-btn px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition";
+            b.className = "noise-type-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition";
           });
-          btn.className = "noise-type-btn px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white transition shadow-xs";
+          btn.className = "noise-type-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#202124] text-white transition shadow-xs";
           const type = btn.getAttribute("data-noise");
           document.getElementById("noiseTypeDesc").innerText = 
-            type === "white" ? "Gaussian Broadband" : (type === "pink" ? "1/f Pink Noise" : "Narrowband Fan Drone");
+            type === "white" ? "Gaussian Broadband" : (type === "pink" ? "1/f Pink Noise" : "Narrowband Fan Hum");
           processDSP();
         });
       });
 
-      // Spectrogram Tab Switching
       const tabNoisy = document.getElementById("tabNoisySpec");
       const tabEnhanced = document.getElementById("tabEnhancedSpec");
       const tabClean = document.getElementById("tabCleanSpec");
 
       function setSpecTab(active) {
         currentSpecView = active;
-        tabNoisy.className = active === "noisy" ? "px-3 py-1 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-xs transition" : "px-3 py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
-        tabEnhanced.className = active === "enhanced" ? "px-3 py-1 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-xs transition" : "px-3 py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
-        tabClean.className = active === "clean" ? "px-3 py-1 text-xs font-semibold rounded-lg bg-white text-slate-900 shadow-xs transition" : "px-3 py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition";
+        tabNoisy.className = active === "noisy" ? "px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition" : "px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition";
+        tabEnhanced.className = active === "enhanced" ? "px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition" : "px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition";
+        tabClean.className = active === "clean" ? "px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition" : "px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition";
         document.getElementById("specInfoText").innerText = `${active.charAt(0).toUpperCase() + active.slice(1)} Spectrogram`;
         drawSpectrogram();
       }
@@ -1106,7 +1126,7 @@
               cleanBuffer = decoded;
               sampleRate = decoded.sampleRate;
               document.getElementById("audioStatusBadge").innerText = `Mic (${decoded.duration.toFixed(1)}s)`;
-              document.getElementById("micText").innerText = "Capture Microphone Input (3s)";
+              document.getElementById("micText").innerText = "Capture Microphone Audio (3s)";
               document.getElementById("micDot").classList.remove("animate-ping");
               processDSP();
             });
@@ -1121,7 +1141,7 @@
           }, 3000);
         } catch (err) {
           alert("Microphone permission denied or unavailable.");
-          document.getElementById("micText").innerText = "Capture Microphone Input (3s)";
+          document.getElementById("micText").innerText = "Capture Microphone Audio (3s)";
           document.getElementById("micDot").classList.remove("animate-ping");
         }
       });
@@ -1156,7 +1176,7 @@
       audioCtx.decodeAudioData(arrayBuf, (decoded) => {
         cleanBuffer = decoded;
         sampleRate = decoded.sampleRate;
-        document.getElementById("audioStatusBadge").innerText = `Clean (${sampleRate}Hz)`;
+        document.getElementById("audioStatusBadge").innerText = `Standard Voice (${sampleRate}Hz)`;
         processDSP();
       }, (err) => {
         console.error("Audio decode error:", err);
