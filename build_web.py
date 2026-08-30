@@ -23,7 +23,6 @@ html_template = """<!DOCTYPE html>
     .font-mono {
       font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     }
-    /* Intuitive Blue Range Sliders */
     input[type=range] {
       -webkit-appearance: none;
       width: 100%;
@@ -54,6 +53,12 @@ html_template = """<!DOCTYPE html>
       border: 1px solid #e5e7eb;
       border-radius: 0.75rem;
       overflow: hidden;
+      min-height: 120px;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
     }
   </style>
 </head>
@@ -91,7 +96,7 @@ html_template = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Navigation Links & Actions -->
+      <!-- Actions -->
       <div class="flex items-center gap-3">
         <button id="resetDefaultsBtn" class="px-4 py-1.5 text-xs font-semibold text-[#202124] bg-[#f2f3f5] hover:bg-[#e5e7eb] rounded-lg border border-[#d1d5db] transition shadow-2xs">
           Reset Defaults
@@ -101,7 +106,7 @@ html_template = """<!DOCTYPE html>
     </div>
   </header>
 
-  <!-- Hero Section (Clean Intuitive da Vinci style) -->
+  <!-- Hero Section -->
   <section class="border-b border-[#e5e7eb] bg-gradient-to-b from-[#fafbfc] to-white py-8 sm:py-10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-3">
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-[#1c23ba] text-xs font-semibold border border-blue-200">
@@ -358,8 +363,8 @@ html_template = """<!DOCTYPE html>
             </div>
           </div>
 
-          <div class="canvas-container h-44 w-full">
-            <canvas id="waveformCanvas" class="w-full h-full block"></canvas>
+          <div class="canvas-container h-48 w-full">
+            <canvas id="waveformCanvas"></canvas>
           </div>
         </div>
 
@@ -386,7 +391,7 @@ html_template = """<!DOCTYPE html>
           </div>
 
           <div class="canvas-container h-64 w-full">
-            <canvas id="spectrogramCanvas" class="w-full h-full block"></canvas>
+            <canvas id="spectrogramCanvas"></canvas>
           </div>
 
           <!-- Colorbar & Information -->
@@ -416,7 +421,7 @@ html_template = """<!DOCTYPE html>
             </span>
           </div>
           <div class="canvas-container h-36 w-full">
-            <canvas id="noiseProfileCanvas" class="w-full h-full block"></canvas>
+            <canvas id="noiseProfileCanvas"></canvas>
           </div>
         </div>
 
@@ -424,7 +429,7 @@ html_template = """<!DOCTYPE html>
 
     </div>
 
-    <!-- Engineering Principles Footer (Intuitive Style) -->
+    <!-- Engineering Principles Footer -->
     <footer class="bg-[#fafbfc] rounded-xl border border-[#e5e7eb] p-6 space-y-4 text-xs text-[#55575c]">
       <div class="flex items-center gap-2 text-[#202124] font-bold text-sm">
         <span>💡</span> Engineering Insights & Signal Principles
@@ -469,7 +474,10 @@ html_template = """<!DOCTYPE html>
       noiseProfile: null,
       numBins: 0,
       numFrames: 0,
-      duration: 0
+      duration: 0,
+      cleanSig: null,
+      noisySig: null,
+      enhancedSig: null
     };
 
     function fft(re, im, inverse = false) {
@@ -570,6 +578,16 @@ html_template = """<!DOCTYPE html>
         bytes[i] = binaryString.charCodeAt(i);
       }
       return bytes.buffer;
+    }
+
+    function getCanvasSize(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.floor((rect.width || canvas.parentElement.clientWidth || 800) * dpr);
+      const h = Math.floor((rect.height || canvas.parentElement.clientHeight || 200) * dpr);
+      canvas.width = Math.max(100, w);
+      canvas.height = Math.max(50, h);
+      return { w: canvas.width, h: canvas.height, dpr: dpr };
     }
 
     function processDSP() {
@@ -802,56 +820,76 @@ html_template = """<!DOCTYPE html>
       btnEnhanced.className = activePlayingType === "enhanced" ? "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-rose-600 text-white shadow-xs transition flex items-center justify-center gap-2" : "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-[#1c23ba] hover:bg-[#0052cc] text-white shadow-xs transition flex items-center justify-center gap-2";
     }
 
+    // --- Continuous High-Contrast Waveforms Renderer ---
     function drawWaveforms() {
       const canvas = document.getElementById("waveformCanvas");
+      if (!canvas) return;
+      const { w, h, dpr } = getCanvasSize(canvas);
       const ctx = canvas.getContext("2d");
-      const w = canvas.width = canvas.clientWidth * window.devicePixelRatio;
-      const h = canvas.height = canvas.clientHeight * window.devicePixelRatio;
       ctx.clearRect(0, 0, w, h);
-
-      if (!stftCache.cleanSig) return;
-
-      const clean = stftCache.cleanSig;
-      const noisy = stftCache.noisySig;
-      const enhanced = stftCache.enhancedSig;
-      const len = clean.length;
-      const step = Math.max(1, Math.floor(len / w));
 
       // Clean Light-Mode Grid Lines
       ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1;
       ctx.beginPath();
-      for (let y = 0.33; y < 1; y += 0.33) {
-        ctx.moveTo(0, h * y);
-        ctx.lineTo(w, h * y);
+      for (let y = 0.333; y < 1; y += 0.333) {
+        ctx.moveTo(0, Math.floor(h * y));
+        ctx.lineTo(w, Math.floor(h * y));
       }
       ctx.stroke();
 
-      drawLane(ctx, clean, 0, h * 0.33, "#059669", step);
-      drawLane(ctx, noisy, h * 0.33, h * 0.33, "#d97706", step);
-      drawLane(ctx, enhanced, h * 0.66, h * 0.33, "#1c23ba", step);
+      if (!stftCache || !stftCache.cleanSig) return;
+
+      const clean = stftCache.cleanSig;
+      const noisy = stftCache.noisySig;
+      const enhanced = stftCache.enhancedSig;
+
+      drawWaveLane(ctx, clean, 0, h * 0.333, "#059669", "Clean Speech", w, dpr);
+      drawWaveLane(ctx, noisy, h * 0.333, h * 0.333, "#d97706", "Noisy Speech (5 dB)", w, dpr);
+      drawWaveLane(ctx, enhanced, h * 0.666, h * 0.333, "#1c23ba", "Enhanced Output", w, dpr);
     }
 
-    function drawLane(ctx, data, top, height, color, step) {
+    function drawWaveLane(ctx, data, top, height, color, label, w, dpr) {
       const mid = top + height / 2;
-      const halfH = height * 0.44;
+      const amp = height * 0.42;
+      const len = data.length;
+      if (len === 0) return;
+
+      // Center baseline
+      ctx.strokeStyle = "rgba(229, 231, 235, 0.9)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, mid);
+      ctx.lineTo(w, mid);
+      ctx.stroke();
+
+      // Waveform envelope
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1.2 * window.devicePixelRatio;
+      ctx.lineWidth = Math.max(1, 1.2 * dpr);
       ctx.beginPath();
 
-      const w = ctx.canvas.width;
-      let x = 0;
-      for (let i = 0; i < data.length && x < w; i += step, x++) {
-        let min = 1.0, max = -1.0;
-        for (let j = 0; j < step && i + j < data.length; j++) {
-          const val = data[i + j];
-          if (val < min) min = val;
-          if (val > max) max = val;
+      const step = Math.max(1, len / w);
+      for (let x = 0; x < w; x++) {
+        const startIdx = Math.floor(x * step);
+        const endIdx = Math.min(len, Math.floor((x + 1) * step));
+        let max = -1, min = 1;
+        for (let i = startIdx; i < endIdx; i++) {
+          const v = data[i];
+          if (v > max) max = v;
+          if (v < min) min = v;
         }
-        ctx.moveTo(x, mid + min * halfH);
-        ctx.lineTo(x, mid + max * halfH);
+        if (min > max) { min = 0; max = 0; }
+        const yTop = mid - Math.max(Math.abs(max) * amp, 1.5);
+        const yBot = mid + Math.max(Math.abs(min) * amp, 1.5);
+        ctx.moveTo(x, yTop);
+        ctx.lineTo(x, yBot);
       }
       ctx.stroke();
+
+      // Label inside lane
+      ctx.fillStyle = color;
+      ctx.font = `bold ${Math.round(9 * dpr)}px 'JetBrains Mono', monospace`;
+      ctx.fillText(label, 10 * dpr, top + 13 * dpr);
     }
 
     function clinicalColormap(norm) {
@@ -883,74 +921,91 @@ html_template = """<!DOCTYPE html>
 
     function drawSpectrogram() {
       const canvas = document.getElementById("spectrogramCanvas");
+      if (!canvas) return;
+      const { w, h, dpr } = getCanvasSize(canvas);
       const ctx = canvas.getContext("2d");
-      const w = canvas.width = canvas.clientWidth * window.devicePixelRatio;
-      const h = canvas.height = canvas.clientHeight * window.devicePixelRatio;
 
       const magData = stftCache[currentSpecView];
-      if (!magData || magData.length === 0) return;
+      if (!magData || magData.length === 0) {
+        ctx.fillStyle = "#fafbfc";
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "#9ca3af";
+        ctx.font = `${Math.round(11 * dpr)}px sans-serif`;
+        ctx.fillText("Rendering Spectrogram...", 20 * dpr, 30 * dpr);
+        return;
+      }
 
       const numFrames = magData.length;
       const numBins = magData[0].length;
 
-      const imgData = ctx.createImageData(w, h);
+      // Offscreen canvas for fast interpolation
+      const offscreen = document.createElement("canvas");
+      offscreen.width = numFrames;
+      offscreen.height = numBins;
+      const offCtx = offscreen.getContext("2d");
+      const imgData = offCtx.createImageData(numFrames, numBins);
       const data = imgData.data;
 
       const minDb = -60;
       const maxDb = 10;
       const dbRange = maxDb - minDb;
 
-      for (let py = 0; py < h; py++) {
-        const binIndex = Math.min(numBins - 1, Math.floor(((h - 1 - py) / h) * numBins));
-        for (let px = 0; px < w; px++) {
-          const frameIndex = Math.min(numFrames - 1, Math.floor((px / w) * numFrames));
-          const mag = magData[frameIndex][binIndex];
+      for (let y = 0; y < numBins; y++) {
+        const binIdx = numBins - 1 - y;
+        for (let x = 0; x < numFrames; x++) {
+          const mag = magData[x][binIdx];
           const db = 20 * Math.log10(mag + 1e-6);
-          const norm = (db - minDb) / dbRange;
+          const norm = Math.max(0, Math.min(1, (db - minDb) / dbRange));
           const [r, g, b] = clinicalColormap(norm);
-
-          const idx = (py * w + px) * 4;
-          data[idx] = r;
-          data[idx + 1] = g;
-          data[idx + 2] = b;
-          data[idx + 3] = 255;
+          const pixelIdx = (y * numFrames + x) * 4;
+          data[pixelIdx] = r;
+          data[pixelIdx + 1] = g;
+          data[pixelIdx + 2] = b;
+          data[pixelIdx + 3] = 255;
         }
       }
 
-      ctx.putImageData(imgData, 0, 0);
+      offCtx.putImageData(imgData, 0, 0);
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(offscreen, 0, 0, w, h);
+
+      // HUD Overlay
       ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
-      ctx.font = `${10 * window.devicePixelRatio}px 'JetBrains Mono', monospace`;
-      ctx.fillText("8.0 kHz", 12, 16 * window.devicePixelRatio);
-      ctx.fillText("4.0 kHz", 12, h * 0.5);
-      ctx.fillText("0.0 Hz", 12, h - 8);
-      ctx.fillText(`${stftCache.duration.toFixed(1)} s`, w - 48 * window.devicePixelRatio, h - 8);
+      ctx.font = `bold ${Math.round(10 * dpr)}px 'JetBrains Mono', monospace`;
+      ctx.fillText("8.0 kHz", 12 * dpr, 16 * dpr);
+      ctx.fillText("4.0 kHz", 12 * dpr, Math.floor(h * 0.5));
+      ctx.fillText("0.0 Hz", 12 * dpr, h - 8 * dpr);
+      ctx.fillText(`${(stftCache.duration || 0).toFixed(1)} s`, w - 48 * dpr, h - 8 * dpr);
     }
 
     function drawNoiseProfile() {
       const canvas = document.getElementById("noiseProfileCanvas");
+      if (!canvas) return;
+      const { w, h, dpr } = getCanvasSize(canvas);
       const ctx = canvas.getContext("2d");
-      const w = canvas.width = canvas.clientWidth * window.devicePixelRatio;
-      const h = canvas.height = canvas.clientHeight * window.devicePixelRatio;
       ctx.clearRect(0, 0, w, h);
 
-      if (!stftCache.noiseProfile) return;
-
-      const profile = stftCache.noiseProfile;
-      const numBins = profile.length;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
 
       ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let y = 0.25; y < 1; y += 0.25) {
-        ctx.moveTo(0, h * y);
-        ctx.lineTo(w, h * y);
+        ctx.moveTo(0, Math.floor(h * y));
+        ctx.lineTo(w, Math.floor(h * y));
       }
       ctx.stroke();
 
+      if (!stftCache || !stftCache.noiseProfile) return;
+
+      const profile = stftCache.noiseProfile;
+      const numBins = profile.length;
       const minDb = -50, maxDb = 10;
+
       ctx.strokeStyle = "#1c23ba";
-      ctx.lineWidth = 2 * window.devicePixelRatio;
+      ctx.lineWidth = 2 * dpr;
       ctx.beginPath();
 
       for (let k = 0; k < numBins; k++) {
@@ -966,15 +1021,15 @@ html_template = """<!DOCTYPE html>
       ctx.lineTo(w, h);
       ctx.lineTo(0, h);
       ctx.closePath();
-      ctx.fillStyle = "rgba(28, 35, 186, 0.06)";
+      ctx.fillStyle = "rgba(28, 35, 186, 0.08)";
       ctx.fill();
 
       ctx.fillStyle = "#55575c";
-      ctx.font = `${9 * window.devicePixelRatio}px 'JetBrains Mono', monospace`;
-      ctx.fillText("0 Hz", 8, h - 6);
-      ctx.fillText("4 kHz", w * 0.5 - 15, h - 6);
-      ctx.fillText("8 kHz", w - 38 * window.devicePixelRatio, h - 6);
-      ctx.fillText("N̂(f) Spectral Magnitude (dB)", 8, 14 * window.devicePixelRatio);
+      ctx.font = `${Math.round(9 * dpr)}px 'JetBrains Mono', monospace`;
+      ctx.fillText("0 Hz", 8 * dpr, h - 6 * dpr);
+      ctx.fillText("4 kHz", Math.floor(w * 0.5 - 15 * dpr), h - 6 * dpr);
+      ctx.fillText("8 kHz", w - 40 * dpr, h - 6 * dpr);
+      ctx.fillText("N̂(f) Spectral Magnitude (dB)", 8 * dpr, 14 * dpr);
     }
 
     function exportWav(buffer) {
@@ -1192,6 +1247,8 @@ html_template = """<!DOCTYPE html>
     window.addEventListener("DOMContentLoaded", () => {
       setupUI();
       loadDefaultAudio();
+      setTimeout(processDSP, 100);
+      setTimeout(processDSP, 350);
     });
   </script>
 </body>
@@ -1206,4 +1263,4 @@ with open("/Users/pratikpandurangpawar/Documents/Noise reduction/index.html", "w
 with open("/Users/pratikpandurangpawar/.gemini/antigravity/brain/1b91713f-83e4-443f-b09a-1104711e074f/app.html", "w") as f:
     f.write(final_html)
 
-print("Generated clean Intuitive white style index.html and app.html successfully!")
+print("Rebuilt index.html with fail-safe canvas sizing and auto-drawing!")
