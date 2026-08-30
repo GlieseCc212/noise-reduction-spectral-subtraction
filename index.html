@@ -43,11 +43,10 @@
     }
     .canvas-container {
       position: relative;
-      background: #ffffff;
+      background: #fafbfc;
       border: 1px solid #e5e7eb;
       border-radius: 0.75rem;
       overflow: hidden;
-      min-height: 120px;
     }
     canvas {
       display: block;
@@ -58,7 +57,7 @@
 </head>
 <body class="bg-white text-[#202124] min-h-full flex flex-col antialiased">
 
-  <!-- Utility Header (Intuitive style) -->
+  <!-- Utility Header -->
   <div class="bg-[#f2f3f5] border-b border-[#e5e7eb] px-4 sm:px-8 py-1.5 text-xs text-[#55575c] flex justify-between items-center">
     <div class="flex items-center gap-4">
       <span class="font-medium tracking-tight">INTUITIVE AUDIO SURGICAL SYSTEMS</span>
@@ -72,7 +71,7 @@
     </div>
   </div>
 
-  <!-- Primary Navigation Bar (Intuitive Clean White Style) -->
+  <!-- Primary Navigation Bar -->
   <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#e5e7eb]">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       
@@ -170,9 +169,9 @@
               <span id="noiseTypeDesc" class="text-slate-400 text-[11px]">Gaussian Broadband</span>
             </label>
             <div class="grid grid-cols-3 gap-1.5">
-              <button data-noise="white" class="noise-type-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#202124] text-white transition shadow-xs">White</button>
-              <button data-noise="pink" class="noise-type-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition">Pink (1/f)</button>
-              <button data-noise="fan" class="noise-type-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition">Fan Hum</button>
+              <button id="btnNoiseWhite" data-noise="white" class="noise-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#202124] text-white transition shadow-xs">White</button>
+              <button id="btnNoisePink" data-noise="pink" class="noise-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition">Pink (1/f)</button>
+              <button id="btnNoiseFan" data-noise="fan" class="noise-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition">Fan Hum</button>
             </div>
           </div>
 
@@ -357,7 +356,7 @@
             </div>
           </div>
 
-          <div class="canvas-container h-48 w-full">
+          <div class="canvas-container h-48 w-full" style="height: 190px;">
             <canvas id="waveformCanvas"></canvas>
           </div>
         </div>
@@ -372,19 +371,19 @@
               <span class="text-[11px] text-slate-400">STFT Spectral Energy Distribution (0 Hz – 8 kHz)</span>
             </div>
             <div class="flex items-center gap-1 bg-[#f2f3f5] p-1 rounded-lg border border-[#e5e7eb]">
-              <button id="tabNoisySpec" class="px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition">
+              <button id="tabNoisySpec" class="spec-tab-btn px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition">
                 Noisy
               </button>
-              <button id="tabEnhancedSpec" class="px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition">
+              <button id="tabEnhancedSpec" class="spec-tab-btn px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition">
                 Enhanced
               </button>
-              <button id="tabCleanSpec" class="px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition">
+              <button id="tabCleanSpec" class="spec-tab-btn px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition">
                 Clean
               </button>
             </div>
           </div>
 
-          <div class="canvas-container h-64 w-full">
+          <div class="canvas-container h-64 w-full" style="height: 256px;">
             <canvas id="spectrogramCanvas"></canvas>
           </div>
 
@@ -414,7 +413,7 @@
               Averaged Spectrum
             </span>
           </div>
-          <div class="canvas-container h-36 w-full">
+          <div class="canvas-container h-36 w-full" style="height: 144px;">
             <canvas id="noiseProfileCanvas"></canvas>
           </div>
         </div>
@@ -460,7 +459,9 @@
     let activeSourceNode = null;
     let activePlayingType = null;
 
+    let currentNoiseType = "white";
     let currentSpecView = "enhanced";
+
     let stftCache = {
       clean: null,
       noisy: null,
@@ -474,7 +475,7 @@
       enhancedSig: null
     };
 
-    function fft(re, im, inverse = false) {
+    function fft(re, im, inverse) {
       const n = re.length;
       let j = 0;
       for (let i = 0; i < n - 1; i++) {
@@ -574,14 +575,16 @@
       return bytes.buffer;
     }
 
-    function getCanvasSize(canvas) {
+    function setupCanvasSize(canvas) {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
-      const w = Math.floor((rect.width || canvas.parentElement.clientWidth || 800) * dpr);
-      const h = Math.floor((rect.height || canvas.parentElement.clientHeight || 200) * dpr);
-      canvas.width = Math.max(100, w);
-      canvas.height = Math.max(50, h);
-      return { w: canvas.width, h: canvas.height, dpr: dpr };
+      const w = Math.max(300, Math.floor((rect.width || canvas.parentElement.clientWidth || 800) * dpr));
+      const h = Math.max(100, Math.floor((rect.height || canvas.parentElement.clientHeight || 180) * dpr));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      return { w, h, dpr };
     }
 
     function processDSP() {
@@ -596,8 +599,7 @@
       const overlapRatio = parseFloat(document.getElementById("selectOverlap").value);
       const hop = Math.round(nfft * (1 - overlapRatio));
       
-      const activeNoiseBtn = document.querySelector(".noise-type-btn.bg-\[\#202124\]");
-      const noiseType = activeNoiseBtn ? activeNoiseBtn.getAttribute("data-noise") : "white";
+      const noiseType = currentNoiseType || "white";
 
       const rawClean = cleanBuffer.getChannelData(0);
       const leadInSamples = Math.round(noiseDuration * sampleRate);
@@ -814,15 +816,14 @@
       btnEnhanced.className = activePlayingType === "enhanced" ? "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-rose-600 text-white shadow-xs transition flex items-center justify-center gap-2" : "w-full py-2.5 px-3 text-xs font-semibold rounded-lg bg-[#1c23ba] hover:bg-[#0052cc] text-white shadow-xs transition flex items-center justify-center gap-2";
     }
 
-    // --- Continuous High-Contrast Waveforms Renderer ---
     function drawWaveforms() {
       const canvas = document.getElementById("waveformCanvas");
       if (!canvas) return;
-      const { w, h, dpr } = getCanvasSize(canvas);
+      const { w, h, dpr } = setupCanvasSize(canvas);
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, w, h);
 
-      // Clean Light-Mode Grid Lines
+      // Light grid lines
       ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -849,15 +850,15 @@
       const len = data.length;
       if (len === 0) return;
 
-      // Center baseline
-      ctx.strokeStyle = "rgba(229, 231, 235, 0.9)";
+      // Baseline
+      ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, mid);
       ctx.lineTo(w, mid);
       ctx.stroke();
 
-      // Waveform envelope
+      // Envelope
       ctx.strokeStyle = color;
       ctx.lineWidth = Math.max(1, 1.2 * dpr);
       ctx.beginPath();
@@ -880,7 +881,6 @@
       }
       ctx.stroke();
 
-      // Label inside lane
       ctx.fillStyle = color;
       ctx.font = `bold ${Math.round(9 * dpr)}px 'JetBrains Mono', monospace`;
       ctx.fillText(label, 10 * dpr, top + 13 * dpr);
@@ -916,23 +916,19 @@
     function drawSpectrogram() {
       const canvas = document.getElementById("spectrogramCanvas");
       if (!canvas) return;
-      const { w, h, dpr } = getCanvasSize(canvas);
+      const { w, h, dpr } = setupCanvasSize(canvas);
       const ctx = canvas.getContext("2d");
 
       const magData = stftCache[currentSpecView];
       if (!magData || magData.length === 0) {
         ctx.fillStyle = "#fafbfc";
         ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = "#9ca3af";
-        ctx.font = `${Math.round(11 * dpr)}px sans-serif`;
-        ctx.fillText("Rendering Spectrogram...", 20 * dpr, 30 * dpr);
         return;
       }
 
       const numFrames = magData.length;
       const numBins = magData[0].length;
 
-      // Offscreen canvas for fast interpolation
       const offscreen = document.createElement("canvas");
       offscreen.width = numFrames;
       offscreen.height = numBins;
@@ -976,7 +972,7 @@
     function drawNoiseProfile() {
       const canvas = document.getElementById("noiseProfileCanvas");
       if (!canvas) return;
-      const { w, h, dpr } = getCanvasSize(canvas);
+      const { w, h, dpr } = setupCanvasSize(canvas);
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, w, h);
 
@@ -1067,11 +1063,36 @@
       a.click();
     }
 
+    function updateNoiseButtonsUI() {
+      const btnWhite = document.getElementById("btnNoiseWhite");
+      const btnPink = document.getElementById("btnNoisePink");
+      const btnFan = document.getElementById("btnNoiseFan");
+
+      btnWhite.className = currentNoiseType === "white" ? "noise-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#202124] text-white transition shadow-xs" : "noise-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition";
+      btnPink.className = currentNoiseType === "pink" ? "noise-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#202124] text-white transition shadow-xs" : "noise-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition";
+      btnFan.className = currentNoiseType === "fan" ? "noise-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#202124] text-white transition shadow-xs" : "noise-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition";
+
+      document.getElementById("noiseTypeDesc").innerText = 
+        currentNoiseType === "white" ? "Gaussian Broadband" : (currentNoiseType === "pink" ? "1/f Pink Noise" : "Narrowband Fan Hum");
+    }
+
+    function updateSpecTabsUI() {
+      const tabNoisy = document.getElementById("tabNoisySpec");
+      const tabEnhanced = document.getElementById("tabEnhancedSpec");
+      const tabClean = document.getElementById("tabCleanSpec");
+
+      tabNoisy.className = currentSpecView === "noisy" ? "spec-tab-btn px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition" : "spec-tab-btn px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition";
+      tabEnhanced.className = currentSpecView === "enhanced" ? "spec-tab-btn px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition" : "spec-tab-btn px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition";
+      tabClean.className = currentSpecView === "clean" ? "spec-tab-btn px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition" : "spec-tab-btn px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition";
+
+      document.getElementById("specInfoText").innerText = `${currentSpecView.charAt(0).toUpperCase() + currentSpecView.slice(1)} Spectrogram`;
+    }
+
     function setupUI() {
       let debounceTimer = null;
       function triggerUpdate() {
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(processDSP, 30);
+        debounceTimer = setTimeout(processDSP, 25);
       }
 
       const inputSnr = document.getElementById("inputSnr");
@@ -1106,36 +1127,13 @@
       document.getElementById("selectNfft").addEventListener("change", triggerUpdate);
       document.getElementById("selectOverlap").addEventListener("change", triggerUpdate);
 
-      const noiseBtns = document.querySelectorAll(".noise-type-btn");
-      noiseBtns.forEach(btn => {
-        btn.addEventListener("click", () => {
-          noiseBtns.forEach(b => {
-            b.className = "noise-type-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#f2f3f5] hover:bg-[#e5e7eb] text-[#202124] border border-[#e5e7eb] transition";
-          });
-          btn.className = "noise-type-btn px-2.5 py-2 text-xs font-semibold rounded-lg bg-[#202124] text-white transition shadow-xs";
-          const type = btn.getAttribute("data-noise");
-          document.getElementById("noiseTypeDesc").innerText = 
-            type === "white" ? "Gaussian Broadband" : (type === "pink" ? "1/f Pink Noise" : "Narrowband Fan Hum");
-          processDSP();
-        });
-      });
+      document.getElementById("btnNoiseWhite").addEventListener("click", () => { currentNoiseType = "white"; updateNoiseButtonsUI(); processDSP(); });
+      document.getElementById("btnNoisePink").addEventListener("click", () => { currentNoiseType = "pink"; updateNoiseButtonsUI(); processDSP(); });
+      document.getElementById("btnNoiseFan").addEventListener("click", () => { currentNoiseType = "fan"; updateNoiseButtonsUI(); processDSP(); });
 
-      const tabNoisy = document.getElementById("tabNoisySpec");
-      const tabEnhanced = document.getElementById("tabEnhancedSpec");
-      const tabClean = document.getElementById("tabCleanSpec");
-
-      function setSpecTab(active) {
-        currentSpecView = active;
-        tabNoisy.className = active === "noisy" ? "px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition" : "px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition";
-        tabEnhanced.className = active === "enhanced" ? "px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition" : "px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition";
-        tabClean.className = active === "clean" ? "px-3 py-1 text-xs font-semibold rounded-md bg-white text-[#1c23ba] shadow-2xs transition" : "px-3 py-1 text-xs font-semibold rounded-md text-[#55575c] hover:text-[#202124] transition";
-        document.getElementById("specInfoText").innerText = `${active.charAt(0).toUpperCase() + active.slice(1)} Spectrogram`;
-        drawSpectrogram();
-      }
-
-      tabNoisy.addEventListener("click", () => setSpecTab("noisy"));
-      tabEnhanced.addEventListener("click", () => setSpecTab("enhanced"));
-      tabClean.addEventListener("click", () => setSpecTab("clean"));
+      document.getElementById("tabNoisySpec").addEventListener("click", () => { currentSpecView = "noisy"; updateSpecTabsUI(); drawSpectrogram(); });
+      document.getElementById("tabEnhancedSpec").addEventListener("click", () => { currentSpecView = "enhanced"; updateSpecTabsUI(); drawSpectrogram(); });
+      document.getElementById("tabCleanSpec").addEventListener("click", () => { currentSpecView = "clean"; updateSpecTabsUI(); drawSpectrogram(); });
 
       document.getElementById("btnPlayClean").addEventListener("click", () => playAudio(cleanBuffer, "clean"));
       document.getElementById("btnPlayNoisy").addEventListener("click", () => playAudio(noisyBuffer, "noisy"));
@@ -1215,6 +1213,10 @@
         document.getElementById("valNoiseDuration").innerText = "0.50 s";
         document.getElementById("selectNfft").value = "512";
         document.getElementById("selectOverlap").value = "0.75";
+        currentNoiseType = "white";
+        currentSpecView = "enhanced";
+        updateNoiseButtonsUI();
+        updateSpecTabsUI();
         loadDefaultAudio();
       });
 
@@ -1241,8 +1243,6 @@
     window.addEventListener("DOMContentLoaded", () => {
       setupUI();
       loadDefaultAudio();
-      setTimeout(processDSP, 100);
-      setTimeout(processDSP, 350);
     });
   </script>
 </body>
